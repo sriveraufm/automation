@@ -212,7 +212,7 @@ def delete_user():
 		user = User.query.filter_by(email = auth.get('email')).delete()
 		tareas = Tareas.query.filter_by(email = auth.get('email')).delete()
 		db.session.commit()
-		return make_response(jsonify({'state' : 'User succesfully deleted' }), 201)#token.decode('UTF-8')
+		return make_response(jsonify({'state' : 'User succesfully deleted' }), 200)#token.decode('UTF-8')
 	# returns 403 if password is wrong
 	return make_response(
 		'Could not verify',
@@ -261,18 +261,23 @@ def add_tarea():
 	# gets name, email and password
 	# name, email = data.get('name'), data.get('email')
 	# password = data.get('password')
-
+	user = User.query\
+		.filter_by(email = data.get('email'))\
+		.first()
+	if user:
 	# checking for existing user
-	tarea = Tareas(
-		email = data.get('email'),
-		title = data.get('title'),
-		description = data.get('description'),
-		status = False
+		tarea = Tareas(
+			email = data.get('email'),
+			title = data.get('title'),
+			description = data.get('description'),
+			status = False
 
-	)
-	db.session.add(tarea)
-	db.session.commit()
-	return make_response('Successfully added', 201)
+		)
+		db.session.add(tarea)
+		db.session.commit()
+		return make_response('Successfully added', 201)
+	else:
+		return make_response('User not found',428)
 
 
 # signup route	
@@ -285,18 +290,21 @@ def get_tareas():
 	# name, email = data.get('name'), data.get('email')
 	# password = data.get('password')
 	user_tareas = Tareas.query.filter_by(email = data.get('email')).all()
-	output = []
-	for tarea in user_tareas:
-		# appending the user data json
-		# to the response list
-		output.append({
-			'id' : tarea.id,
-			'title': tarea.title,
-			'description' : tarea.description,
-			'status' : tarea.status
-		})
+	if user_tareas:
+		output = []
+		for tarea in user_tareas:
+			# appending the user data json
+			# to the response list
+			output.append({
+				'id' : tarea.id,
+				'title': tarea.title,
+				'description' : tarea.description,
+				'status' : tarea.status
+			})
 
-	return jsonify({'tareas': output})
+		return make_response(jsonify({'tareas': output}), 200)
+	else:
+		return make_response('No content found with given parameters',428)
 
 # signup route
 @app.route('/get_uncompleted', methods =['GET'])
@@ -308,17 +316,20 @@ def get_uncompleted():
 	# name, email = data.get('name'), data.get('email')
 	# password = data.get('password')
 	user_tareas = Tareas.query.filter_by(email = data.get('email'), status = False).all()
-	output = []
-	for tarea in user_tareas:
-		# appending the user data json
-		# to the response list
-		output.append({
-			'id' : tarea.id,
-			'title': tarea.title,
-			'description' : tarea.description,
-			'status' : tarea.status
-		})
-	return jsonify({'tareas': output})
+	if user_tareas:
+		output = []
+		for tarea in user_tareas:
+			# appending the user data json
+			# to the response list
+			output.append({
+				'id' : tarea.id,
+				'title': tarea.title,
+				'description' : tarea.description,
+				'status' : tarea.status
+			})
+		return make_response(jsonify({'tareas': output}),200)
+	else:
+		return make_response('No content found with given parameters',428)
 
 # signup route
 @app.route('/get_completed', methods =['GET'])
@@ -330,17 +341,20 @@ def get_completed():
 	# name, email = data.get('name'), data.get('email')
 	# password = data.get('password')
 	user_tareas = Tareas.query.filter_by(email = data.get('email'), status = True).all()
-	output = []
-	for tarea in user_tareas:
-		# appending the user data json
-		# to the response list
-		output.append({
-			'id' : tarea.id,
-			'title': tarea.title,
-			'description' : tarea.description,
-			'status' : tarea.status
-		})
-	return jsonify({'tareas': output})
+	if user_tareas:
+		output = []
+		for tarea in user_tareas:
+			# appending the user data json
+			# to the response list
+			output.append({
+				'id' : tarea.id,
+				'title': tarea.title,
+				'description' : tarea.description,
+				'status' : tarea.status
+			})
+		return make_response(jsonify({'tareas': output}),200)
+	else:
+		return make_response('No content found with given parameters',428)
 
 @app.route('/mark_completed', methods =['POST'])
 def mark_completed():
@@ -351,9 +365,12 @@ def mark_completed():
 	# name, email = data.get('name'), data.get('email')
 	# password = data.get('password')
 	user_tareas = Tareas.query.filter_by(id = data.get('id')).first()
-	user_tareas.status = True
-	db.session.commit()
-	return jsonify({'State': 'Completed!'})
+	if user_tareas:
+		user_tareas.status = True
+		db.session.commit()
+		return make_response(jsonify({'State': 'Completed!'}),200)
+	else:
+		return make_response('No content found with given parameters',428)
 
 @app.route('/mark_uncompleted', methods =['POST'])
 def mark_uncompleted():
@@ -364,9 +381,12 @@ def mark_uncompleted():
 	# name, email = data.get('name'), data.get('email')
 	# password = data.get('password')
 	user_tareas = Tareas.query.filter_by(id = data.get('id')).first()
-	user_tareas.status = False
-	db.session.commit()
-	return jsonify({'State': 'Uncompleted.'})
+	if user_tareas:
+		user_tareas.status = False
+		db.session.commit()
+		return make_response(jsonify({'State': 'Uncompleted.'}), 200)
+	else:
+		return make_response('No content found with given parameters',428)
 
 
 
@@ -379,8 +399,11 @@ def delete_tarea():
 	# name, email = data.get('name'), data.get('email')
 	# password = data.get('password')
 	user_tareas = Tareas.query.filter_by(id = data.get('id')).delete()
-	db.session.commit()
-	return jsonify({'State': 'Deleted.'})
+	if user_tareas:
+		db.session.commit()
+		return make_response(jsonify({'State': 'Deleted.'}),200)
+	else:
+		return make_response('No content found with given parameters',428)
 
 
 @app.route('/modify_description', methods =['POST'])
@@ -392,9 +415,12 @@ def modify_description():
 	# name, email = data.get('name'), data.get('email')
 	# password = data.get('password')
 	user_tareas = Tareas.query.filter_by(id = data.get('id')).first()
-	user_tareas.description = data.get('new_description')
-	db.session.commit()
-	return jsonify({'State': 'Description changed.'})
+	if user_tareas:
+		user_tareas.description = data.get('new_description')
+		db.session.commit()
+		return make_response(jsonify({'State': 'Description changed.'}),200)
+	else:
+		return make_response('No content found with given parameters',428)
 
 	
 @app.route('/modify_title', methods =['POST'])
@@ -406,9 +432,12 @@ def modify_tit():
 	# name, email = data.get('name'), data.get('email')
 	# password = data.get('password')
 	user_tareas = Tareas.query.filter_by(id = data.get('id')).first()
-	user_tareas.title = data.get('new_title')
-	db.session.commit()
-	return jsonify({'State': 'Title changed.'})
+	if user_tareas:
+		user_tareas.title = data.get('new_title')
+		db.session.commit()
+		return make_response(jsonify({'State': 'Title changed.'}),200)
+	else:
+		return make_response('No content found with given parameters',428)
 
 if __name__ == "__main__":
 	# setting debug to True enables hot reload
