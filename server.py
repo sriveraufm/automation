@@ -3,8 +3,6 @@ from flask import Flask, request, jsonify, make_response, current_app
 from flask_sqlalchemy import SQLAlchemy
 import uuid # for public id
 from werkzeug.security import generate_password_hash, check_password_hash
-# imports for PyJWT authentication
-import jwt
 from datetime import datetime, timedelta
 from functools import wraps
 from flask_cors import CORS
@@ -38,37 +36,8 @@ class Tareas(db.Model):
 	status = db.Column(db.Boolean, default=False, nullable=False)
 
 db.create_all()
-# decorator for verifying the JWT
-def token_required(f):
-	@wraps(f)
-	def decorated(*args, **kwargs):
-		token = None
-		# jwt is passed in the request header
-		if 'x-access-token' in request.headers:
-			token = request.headers['x-access-token']
-		# return 401 if token is not passed
-		if not token:
-			return jsonify({'message' : 'Token is missing !!'}), 401
-
-		try:
-			# decoding the payload to fetch the stored details
-			data = token#jwt.decode(token, app.config['SECRET_KEY'])  y abajo data['public_id'] 
-			current_user = User.query\
-				.filter_by(public_id = data)\
-				.first()
-		except:
-			return jsonify({
-				'message' : 'Token is invalid !!'
-			}), 401
-		# returns the current logged in users contex to the routes
-		return f(current_user, *args, **kwargs)
-
-	return decorated
-
-# User Database Route
 # this route sends back list of users
 @app.route('/user', methods =['GET'])
-@token_required
 def get_all_users(current_user):
 	# querying the database
 	# for all the entries in it
@@ -85,7 +54,7 @@ def get_all_users(current_user):
 			'email' : user.email
 		})
 
-	return jsonify({'users': output})
+	return  make_response(jsonify({'users': output}),200)
 
 # route for logging user in
 @app.route('/login', methods =['POST'])
@@ -115,13 +84,7 @@ def login():
 		)
 
 	if check_password_hash(user.password, auth.get('password')):
-		# generates the JWT Token
-		token = jwt.encode({
-			'public_id': user.public_id,
-			'exp' : datetime.utcnow() + timedelta(minutes = 30)
-		}, app.config['SECRET_KEY'])
-		print(token)
-		return make_response(jsonify({'token' :token }), 201)#token.decode('UTF-8')
+		return make_response('login', 201)#token.decode('UTF-8')
 	# returns 403 if password is wrong
 	return make_response(
 		'Could not verify',
@@ -176,7 +139,7 @@ def change_password():
 
 
 # route for logging user in
-@app.route('/delete_user', methods =['POST'])
+@app.route('/delete_user', methods =['DELETE'])
 def delete_user():
 	# creates dictionary of form data
 	# auth = request.form
@@ -390,7 +353,7 @@ def mark_uncompleted():
 
 
 
-@app.route('/delete_tarea', methods =['POST'])
+@app.route('/delete_tarea', methods =['DELETE'])
 def delete_tarea():
 	# creates a dictionary of the form data
 	# data = request.form
@@ -398,8 +361,9 @@ def delete_tarea():
 	# gets name, email and password
 	# name, email = data.get('name'), data.get('email')
 	# password = data.get('password')
-	user_tareas = Tareas.query.filter_by(id = data.get('id')).delete()
+	user_tareas = Tareas.query.filter_by(id = data.get('id')).first()
 	if user_tareas:
+		Tareas.query.filter_by(id = data.get('id')).delete()
 		db.session.commit()
 		return make_response(jsonify({'State': 'Deleted.'}),200)
 	else:
